@@ -6,5 +6,11 @@ The agent is a model of a robot within an environment. The robot comes with the 
   
 Each level has a particular objective to achieve. Good luck!
 ## Agent
+As discussed, the agent is a model of a robot. It comes with the following functions which can be used to perform various actions:
+* getPose()
+* setVelocity(bearing:float, mag:float)
+* readSensors()
+
+These are just functions that I have made for you. Feel free to make your own if you know how!
 ## Level 1
 ## Level 2
