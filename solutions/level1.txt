@@ -1,0 +1,21 @@
+readings = agent.readSensors(maxRange=maxRange)
+        left  = readings["leftIR"]
+        right = readings["rightIR"]
+
+        if left < triggerDist and right < triggerDist:
+            bearing += turnStep
+            mag = 0.0
+        elif left < triggerDist:
+            bearing += turnStep
+            mag = speed
+        elif right < triggerDist:
+            bearing -= turnStep
+            mag = speed
+        else:
+            mag = speed
+        bearing %= 360.0
+
+        agent.setVelocity(bearing=bearing, mag=mag)
+
+
+        agent.setVelocity(bearing=bearing, mag=speed)

@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot name="agent">
+
+  <link name="base">
+    <visual>
+      <geometry><box size="0.5 0.5 0.5"/></geometry>
+      <material name="red"><color rgba="0.8 0.2 0.2 1.0"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="0.5 0.5 0.5"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.04" iyy="0.04" izz="0.04" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+  <link name="leftIR">
+    <visual>
+      <geometry><box size="0.02 0.02 0.02"/></geometry>
+      <material name="black"><color rgba="0 0 0 1"/></material>
+    </visual>
+  </link>
+  <joint name="leftIRJoint" type="fixed">
+    <parent link="base"/>
+    <child  link="leftIR"/>
+    <origin xyz="0.25 0.15 0.0" rpy="0 0 0.26"/>
+  </joint>
+  <link name="rightIR">
+    <visual>
+      <geometry><box size="0.02 0.02 0.02"/></geometry>
+      <material name="black"><color rgba="0 0 0 1"/></material>
+    </visual>
+  </link>
+  <joint name="rightIRJoint" type="fixed">
+    <parent link="base"/>
+    <child  link="rightIR"/>
+    <origin xyz="0.25 -0.15 0.0" rpy="0 0 -0.26"/>
+  </joint>
+
+</robot>

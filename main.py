@@ -7,21 +7,29 @@ import math
 class Environment:
     def __init__(self, timeStep):
         self._physicsClient = pybullet.connect(pybullet.GUI)
-        self._timeStep = timeStep
+        self._timeStep      = timeStep
+        self._objectiveId   = None
+
         pybullet.setAdditionalSearchPath(pybullet_data.getDataPath())
         pybullet.setTimeStep(timeStep)
 
-    def loadEnvironment(self, level:str, size = 1.0, mass = 0, colour = [1.0, 1.0, 1.0, 1.0]) -> None:
+    def loadEnvironment(self, level:str) -> None:
         pybullet.loadURDF("plane.urdf")
         env = loadConfig("configs/env.json")
-        self._spawnBarriers(env["arenaWalls"]["barriers"])
+
 
         levels = loadConfig("configs/levels.json")
         if level not in levels:
             print(f"! {level} not found in configs/levels.json")
             exit(2)
         else:
-            self._spawnBarriers(levels[level]["barriers"])
+            levelData = levels[level]
+            self._spawnBarriers(levelData["barriers"])
+            if "objective" in levelData:
+                self._objectiveId = self._spawnBarriers(
+                    [levelData["objective"]],
+                    colour = [0.0, 1.0, 0.0, 1.0]
+                )
 
     def step(self) -> None:
         pybullet.stepSimulation()
@@ -44,7 +52,7 @@ class Environment:
             ))
         return ids
 
-    def updateCameraPosition(self, targetPos:tuple, dist = 5.0, yaw = 0.0, pitch = -89.9) -> None:
+    def updateCameraPosition(self, targetPos:tuple, dist = 10.0, yaw = 0.0, pitch = -89.9) -> None:
         pybullet.resetDebugVisualizerCamera(
             cameraDistance       = dist,
             cameraYaw            = yaw,
@@ -54,55 +62,109 @@ class Environment:
 
 class Agent:
     def __init__(self, env):
-        self._bodyId = None
-        self._env = env
+        self._bodyId      = None
+        self._env         = env
+        self._sensorLinks = {}
 
     def load(self):
         agent = loadConfig("configs/agent.json")
-        halfExtents = [dim / 2 for dim in agent["size"]]
-        collisionShape = pybullet.createCollisionShape(
-            pybullet.GEOM_BOX,
-            halfExtents=halfExtents
+        self._bodyId = pybullet.loadURDF(
+            "assets/agent.urdf",
+            basePosition = agent["pos"]
         )
-        visualShape = pybullet.createVisualShape(
-            pybullet.GEOM_BOX,
-            halfExtents=halfExtents,
-            rgbaColor = agent["colour"]
-        )
-        self._bodyId = pybullet.createMultiBody(
-            baseMass=agent["mass"],
-            baseCollisionShapeIndex=collisionShape,
-            baseVisualShapeIndex=visualShape,
-            basePosition=agent["pos"],
-        )
+        for i in range(pybullet.getNumJoints(self._bodyId)):
+            name = pybullet.getJointInfo(self._bodyId, i)[12].decode()
+            self._sensorLinks[name] = i
 
     def getPose(self) -> tuple:
         return pybullet.getBasePositionAndOrientation(self._bodyId)
 
-    def move(self, speed = 2.0, steps = 120) -> None:
-        _, orientation = self.getPose()
-        _, _, yaw = pybullet.getEulerFromQuaternion(orientation)   # current heading
-        velocity = [speed * math.cos(yaw), speed * math.sin(yaw), 0.0]
-        for _ in range(steps):
-            pybullet.resetBaseVelocity(self._bodyId, linearVelocity=velocity, angularVelocity=[0,0,0])
-            pybullet.stepSimulation()
-            self._env.updateCameraPosition(targetPos=self.getPose()[0])
-            time.sleep(1 / 240)
-        pybullet.resetBaseVelocity(self._bodyId, linearVelocity=[0,0,0], angularVelocity=[0,0,0])
-
-    def setAngle(self, angle:float) -> None:
-        yaw = math.radians(90 - angle)
+    def setVelocity(self, bearing:float, mag:float) -> None:
+        yaw = math.radians(90 - bearing)
         orientation = pybullet.getQuaternionFromEuler([0, 0, yaw])
         position, _ = self.getPose()
         pybullet.resetBasePositionAndOrientation(self._bodyId, position, orientation)
+        velocity = [mag * math.cos(yaw), mag * math.sin(yaw), 0.0]
+        pybullet.resetBaseVelocity(
+            self._bodyId,
+            linearVelocity = velocity
+        )
 
-    def runSequence(self, moves:list) -> None:
-        for move in moves:
-            if isinstance(move, tuple):
-                method, *args = move
-                method(*args)
+    def stop(self) -> None:
+        pybullet.resetBaseVelocity(
+            self._bodyId,
+            linearVelocity = [0.0, 0.0, 0.0]
+        )
+
+    def readSensors(self, maxRange = 12.0) -> tuple:
+        readings   = {}
+        raySources = []
+        raySinks   = []
+        names      = []
+
+        for name in ("leftIR", "rightIR"):
+            state = pybullet.getLinkState(
+                self._bodyId,
+                self._sensorLinks[name]
+            )
+            linkPos         = state[0]
+            linkOrientation = state[1]
+
+            rotationMatrix = pybullet.getMatrixFromQuaternion(linkOrientation)
+            forward = [rotationMatrix[0], rotationMatrix[3], rotationMatrix[6]]
+
+            raySources.append(linkPos)
+            raySinks.append(
+                [linkPos[i] + forward[i] * maxRange for i in range(3)]
+            )
+            names.append(name)
+
+        results = pybullet.rayTestBatch(
+            raySources,
+            raySinks
+        )
+
+        for name, result in zip(names, results):
+            hitBodyId, _, hitFrac, _, _ = result
+            if hitBodyId < 0:
+                readings[name] = maxRange
             else:
-                move()
+                readings[name] = hitFrac * maxRange
+        return readings["leftIR"], readings["rightIR"]
+
+    def renderCamera(self, width = 160, height = 160, fov = 90.0, near = 0.02, far = 12.0, eyeHeight = 0.3, forwardOffset = 0.3):
+        pos, orientation = self.getPose()
+        rotationMatrix = pybullet.getMatrixFromQuaternion(orientation)
+        forward = [
+            rotationMatrix[0],
+            rotationMatrix[3],
+            rotationMatrix[6]
+        ]
+        eye = [
+            pos[0] + forward[0] * forwardOffset,
+            pos[1] + forward[1] * forwardOffset,
+            pos[2] + eyeHeight
+        ]
+        target = [eye[i] + forward[i] for i in range(3)]
+
+        viewMatrix = pybullet.computeViewMatrix(
+            cameraEyePosition    = eye,
+            cameraTargetPosition = target,
+            cameraUpVector       = [0.0, 0.0, 1.0]
+        )
+        projectionMatrix = pybullet.computeProjectionMatrixFOV(
+            fov     = fov,
+            aspect  = width / height,
+            nearVal = near,
+            farVal  = far
+        )
+        return pybullet.getCameraImage(
+            width,
+            height,
+            viewMatrix       = viewMatrix,
+            projectionMatrix = projectionMatrix,
+            renderer         = pybullet.ER_BULLET_HARDWARE_OPENGL
+        )
 
 def loadConfig(path:str) -> dict:
     try:
@@ -114,20 +176,45 @@ def loadConfig(path:str) -> dict:
 
 if __name__ == "__main__":
     timeStep = 1 / 240
-    env = Environment(
-        timeStep = timeStep
-    )
+    env = Environment(timeStep=timeStep)
     agent = Agent(env)
 
-    env.loadEnvironment(level = "level1")
+    env.loadEnvironment(level="level2")
     agent.load()
 
-    # define your sequence of movements here!
-    agent.runSequence([
-        (agent.setAngle, 0.0),
-        agent.move,
-        (agent.setAngle, 45.0),
-        agent.move,
-    ])
+    bearing      = 0.0
+    speed        = 5.0
+    turnStep     = 15.0
+    triggerDist  = 1.25
+    maxRange     = 12.0
 
-    time.sleep(2)
+    renderRate = 5
+    frame      = 0
+    while True:
+        left, right = agent.readSensors(maxRange=maxRange)
+
+
+        if left < triggerDist and right < triggerDist:
+            bearing += turnStep
+            mag = 0.0
+        elif left < triggerDist:
+            bearing += turnStep
+            mag = speed
+        elif right < triggerDist:
+            bearing -= turnStep
+            mag = speed
+        else:
+            mag = speed
+        bearing %= 360.0
+
+        agent.setVelocity(bearing=bearing, mag=mag)
+
+
+        agent.setVelocity(bearing=bearing, mag=speed)
+# ----------------------| do not delete any of the below code if you want the simulator to work! |----------------------
+        env.step()
+        env.updateCameraPosition(targetPos=agent.getPose()[0])
+        time.sleep(timeStep)
+        frame += 1
+        if frame % renderRate == 0:
+            agent.renderCamera()
