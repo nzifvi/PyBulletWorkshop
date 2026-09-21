@@ -30,6 +30,7 @@ The setVelocity function updates the velocity vector of the agent by taking in 2
 
 #### readSensors Function
 The readSensors function is used to take measurements from both infrared sensors. The function returns a tuple in the following form:
-$$\bigg(\bigg)$$
+
+$$\bigg(IR_{\text{left}}, IR_{\text{right}}\bigg)$$
 ## Level 1
 ## Level 2
