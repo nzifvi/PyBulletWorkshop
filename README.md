@@ -12,5 +12,8 @@ As discussed, the agent is a model of a robot. It comes with the following funct
 * readSensors()
 
 These are just functions that I have made for you. Feel free to make your own if you know how!
+
+<img width="622" height="650" alt="Untitled" src="https://github.com/user-attachments/assets/c5861cbb-69e2-4fbd-8fa3-bbf4b97f24ca" />
+
 ## Level 1
 ## Level 2
