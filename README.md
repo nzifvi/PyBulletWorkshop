@@ -38,13 +38,18 @@ The objective of level 1 is to figure out how to use the infrared sensors (IR) t
 ### Hint
 Consider all cases which may occur when a robot is moving: encountered wall on left, right, a wall which is equidistant to both sensors, or no wall at all. Using the measurements from the infrared sensors, you must devise a way to handle each case.
 ## Level 2
+### Objective
 The objective of level 2 is to navigate towards the green cube within the arena using methods from level 1 as well as new ones that you come up with. As task 2 is more complex, additional functions members of the Agent object have been created for you! These functions are:
 * getBearing
 * castRay
 * seeObjective
 * atObjective
+  
 To make things easier, the parameters of these functions have been assigned default values. However, if you want, you are able to override them as you see fit.
-### Objective
 ### Hint
+Please note that there are multiple solutions to this problem. This solution is one that I came up with : )
+
+
+The robot has 2 possible states whilst exploring the maze: explore and seek. If the agent cannot see the green cube (determined by the return values of seeObjective) then you know that the agent must keep exploring. If the agent can see the green cube then there is no need to continue exploring and it should navigate towards the green cube. Furthermore, using the solution to level1 that you devised, the agent already has a partial exploration algorithim. With a bit of modification, it can be turned into a proper navigation algorithim such as the left (or right) hand rule.
 ## Solutions
 For solutions, please look at the text file with the name of the level you desire to see the solution of. Otherwise, ask a member of PAL in the lab : )
