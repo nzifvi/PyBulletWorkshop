@@ -1,21 +1,27 @@
-readings = agent.readSensors(maxRange=maxRange)
-        left  = readings["leftIR"]
-        right = readings["rightIR"]
+    turnStep     = 15.0
+    triggerDist  = 1.25
+    maxRange     = 12.0
+
+    renderRate = 5
+    frame      = 0
+    while True:
+        left, right = agent.readSensors(maxRange=maxRange)
+        orientation = agent.getPose()[1]
+
+        yaw = pybullet.getEulerFromQuaternion(orientation)[2]
+        bearing = (90 - math.degrees(yaw)) % 360
 
         if left < triggerDist and right < triggerDist:
             bearing += turnStep
             mag = 0.0
         elif left < triggerDist:
             bearing += turnStep
-            mag = speed
+            mag = 10.0
         elif right < triggerDist:
             bearing -= turnStep
-            mag = speed
+            mag = 10.0
         else:
-            mag = speed
+            mag = 10.0
         bearing %= 360.0
 
         agent.setVelocity(bearing=bearing, mag=mag)
-
-
-        agent.setVelocity(bearing=bearing, mag=speed)
