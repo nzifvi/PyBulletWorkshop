@@ -38,7 +38,12 @@ The objective of level 1 is to figure out how to use the infrared sensors (IR) t
 ### Hint
 Consider all cases which may occur when a robot is moving: encountered wall on left, right, a wall which is equidistant to both sensors, or no wall at all. Using the measurements from the infrared sensors, you must devise a way to handle each case.
 ## Level 2
-The objective of level 2 is to navigate towards the green cube within the arena using methods from level 1 as well as new ones that you come up with. If you are struggling, please look at the hints section or ask a member of PAL.
+The objective of level 2 is to navigate towards the green cube within the arena using methods from level 1 as well as new ones that you come up with. As task 2 is more complex, additional functions members of the Agent object have been created for you! These functions are:
+* getBearing
+* castRay
+* seeObjective
+* atObjective
+To make things easier, the parameters of these functions have been assigned default values. However, if you want, you are able to override them as you see fit.
 ### Objective
 ### Hint
 ## Solutions
