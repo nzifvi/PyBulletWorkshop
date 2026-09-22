@@ -1,35 +1,37 @@
-    speed       = 10.0
+speed       = 5.0
     seekSpeed   = 2.5
     turnStep    = 15.0
     triggerDist = 1.25
     stopDist    = 0.6
     maxRange    = 12.0
 
-    while True:
-        if agent.atObjective():
-            agent.stop()
-            break
-        seen, cubeOff, cubeDist = agent.seeObjective(maxRange=maxRange)
-        bearing                 = agent.getBearing()
+    with env.openViewer() as viewer:
+        while viewer.is_running():
+            if agent.atObjective():
+                agent.stop()
+                break
+            seen, cubeOff, cubeDist = agent.seeObjective(maxRange=maxRange)
+            bearing                 = agent.getBearing()
 
-        if seen:
-            if cubeDist < stopDist:
-                agent.stop(); print("Objective reached."); break
-            bearing += max(-turnStep, min(turnStep, cubeOff))
-            mag = seekSpeed
-        else:
-            left, right = agent.readSensors(maxRange=maxRange)
-            if left < triggerDist and right < triggerDist:
-                bearing += turnStep
-                mag = 0.0
-            elif left < triggerDist:
-                bearing += turnStep
-                mag = speed
-            elif right < triggerDist:
-                bearing -= turnStep
-                mag = speed
+            if seen:
+                if cubeDist < stopDist:
+                    agent.stop()
+                    break
+                bearing += max(-turnStep, min(turnStep, cubeOff))
+                mag = seekSpeed
             else:
-                mag = speed
+                left, right = agent.readSensors(maxRange=maxRange)
+                if left < triggerDist and right < triggerDist:
+                    bearing += turnStep
+                    mag = 0.0
+                elif left < triggerDist:
+                    bearing += turnStep
+                    mag = speed
+                elif right < triggerDist:
+                    bearing -= turnStep
+                    mag = speed
+                else:
+                    mag = speed
 
-        bearing %= 360.0
-        agent.setVelocity(bearing=bearing, mag=mag)
+            bearing %= 360.0
+            agent.setVelocity(bearing=bearing, mag=mag)
